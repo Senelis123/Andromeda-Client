@@ -10,7 +10,7 @@ use crate::{
     platform::AppPaths,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Launcher {
     state: AppState,
     settings_repository: SettingsRepository,
@@ -40,7 +40,7 @@ pub fn run(paths: AppPaths) -> iced::Result {
         state: AppState::new(outcome.settings, outcome.recovery_notice),
         settings_repository: repository,
     };
-    iced::application(move || app, Launcher::update, Launcher::view)
+    iced::application(move || app.clone(), Launcher::update, Launcher::view)
         .title(Launcher::title)
         .subscription(Launcher::subscription)
         .theme(Launcher::theme)

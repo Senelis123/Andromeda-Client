@@ -14,7 +14,7 @@ pub enum Page {
     Settings,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AppState {
     pub page: Page,
     pub settings: AppSettings,
