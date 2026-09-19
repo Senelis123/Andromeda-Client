@@ -1,8 +1,6 @@
 use std::time::Duration;
 
-use iced::widget::{
-    Space, button, column, container, progress_bar, row, rule, scrollable, text,
-};
+use iced::widget::{Space, button, column, container, progress_bar, row, rule, scrollable, text};
 use iced::{Element, Length, Subscription, Theme};
 
 use crate::{
