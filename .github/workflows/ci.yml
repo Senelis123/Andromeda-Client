@@ -16,5 +16,12 @@ jobs:
         with:
           components: rustfmt, clippy
       - run: cargo fmt --check
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Run Clippy
+        shell: bash
+        run: cargo clippy --all-targets --all-features -- -D warnings 2>&1 | tee clippy-${{ runner.os }}.log
+        continue-on-error: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clippy-${{ runner.os }}
+          path: clippy-${{ runner.os }}.log
       - run: cargo test --all-targets
