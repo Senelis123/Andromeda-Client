@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use iced::widget::{
-    Space, button, column, container, horizontal_rule, progress_bar, row, scrollable, text,
+    Space, button, column, container, progress_bar, row, rule, scrollable, text,
 };
 use iced::{Element, Length, Subscription, Theme};
 
@@ -42,7 +42,8 @@ pub fn run(paths: AppPaths) -> iced::Result {
         state: AppState::new(outcome.settings, outcome.recovery_notice),
         settings_repository: repository,
     };
-    iced::application(Launcher::title, Launcher::update, Launcher::view)
+    iced::application(move || app, Launcher::update, Launcher::view)
+        .title(Launcher::title)
         .subscription(Launcher::subscription)
         .theme(Launcher::theme)
         .window(iced::window::Settings {
@@ -50,7 +51,7 @@ pub fn run(paths: AppPaths) -> iced::Result {
             min_size: Some(iced::Size::new(900.0, 600.0)),
             ..Default::default()
         })
-        .run_with(|| (app, iced::Task::none()))
+        .run()
 }
 
 impl Launcher {
@@ -183,7 +184,7 @@ impl Launcher {
         column![
             text("Appearance").size(21),
             row![button("Light").on_press(Message::SetTheme(ThemePreference::Light)), button("Dark").on_press(Message::SetTheme(ThemePreference::Dark)), button("System").on_press(Message::SetTheme(ThemePreference::System))].spacing(8),
-            horizontal_rule(1), text("Minecraft catalog").size(21),
+            rule::horizontal(1), text("Minecraft catalog").size(21),
             text("All versions will be obtained from Mojang's live version manifest. New releases appear after automatic catalog refresh."),
             button(snapshots).on_press(Message::ToggleSnapshots),
             text(format!("Download concurrency: {}", self.state.settings.download_concurrency)),
