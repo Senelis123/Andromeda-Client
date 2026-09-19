@@ -51,16 +51,19 @@ pub fn run(paths: AppPaths) -> iced::Result {
             initial.state.catalog = CatalogState::Loading;
             let task = refresh_catalog(initial.cache_root.clone());
             (initial, task)
-        }, Launcher::update, Launcher::view)
-        .title(Launcher::title)
-        .subscription(Launcher::subscription)
-        .theme(Launcher::theme)
-        .window(iced::window::Settings {
-            size: iced::Size::new(1100.0, 720.0),
-            min_size: Some(iced::Size::new(900.0, 600.0)),
-            ..Default::default()
-        })
-        .run()
+        },
+        Launcher::update,
+        Launcher::view,
+    )
+    .title(Launcher::title)
+    .subscription(Launcher::subscription)
+    .theme(Launcher::theme)
+    .window(iced::window::Settings {
+        size: iced::Size::new(1100.0, 720.0),
+        min_size: Some(iced::Size::new(900.0, 600.0)),
+        ..Default::default()
+    })
+    .run()
 }
 
 impl Launcher {
@@ -166,12 +169,28 @@ impl Launcher {
             Page::Home => column![
                 text("Welcome to your Minecraft library").size(26),
                 self.catalog_summary(),
-                container(column![text("Vanilla demonstration instance").size(21), text("Version: not installed  •  Java: not configured"), button("Run progress demonstration").on_press(Message::StartDemo)].spacing(14)).padding(22),
-            ].spacing(20).into(),
+                container(
+                    column![
+                        text("Vanilla demonstration instance").size(21),
+                        text("Version: not installed  •  Java: not configured"),
+                        button("Run progress demonstration").on_press(Message::StartDemo)
+                    ]
+                    .spacing(14)
+                )
+                .padding(22),
+            ]
+            .spacing(20)
+            .into(),
             Page::Instances => self.versions_page(),
             Page::Downloads => self.downloads_page(),
-            Page::Accounts => placeholder("Accounts", "Official Microsoft authentication will be implemented in Milestone 6. No credentials are collected yet."),
-            Page::Logs => placeholder("Logs & console", "Structured launcher logs are stored on disk. Game-session filtering arrives with the launch engine."),
+            Page::Accounts => placeholder(
+                "Accounts",
+                "Official Microsoft authentication will be implemented in Milestone 6. No credentials are collected yet.",
+            ),
+            Page::Logs => placeholder(
+                "Logs & console",
+                "Structured launcher logs are stored on disk. Game-session filtering arrives with the launch engine.",
+            ),
             Page::Settings => self.settings_page(),
         }
     }
@@ -188,13 +207,17 @@ impl Launcher {
 
         let mut versions = column![
             text("Available Minecraft versions").size(22),
-            text("Live entries from Mojang's manifest. Installation is implemented in Milestone 5."),
+            text(
+                "Live entries from Mojang's manifest. Installation is implemented in Milestone 5."
+            ),
         ]
         .spacing(8);
         for version in manifest
             .versions
             .iter()
-            .filter(|version| self.state.settings.show_snapshots || version.kind == VersionKind::Release)
+            .filter(|version| {
+                self.state.settings.show_snapshots || version.kind == VersionKind::Release
+            })
             .take(40)
         {
             versions = versions.push(
@@ -212,18 +235,61 @@ impl Launcher {
     fn catalog_summary(&self) -> Element<'_, Message> {
         match &self.state.catalog {
             CatalogState::NotLoaded => text("Version catalog has not been loaded.").into(),
-            CatalogState::Loading => row![text("Refreshing the official Minecraft catalog…"), button("Refresh").on_press(Message::RefreshCatalog)].spacing(12).into(),
-            CatalogState::Failed(error) => container(column![text("Could not load Minecraft versions").size(20), text(error), button("Try again").on_press(Message::RefreshCatalog)].spacing(10)).padding(16).into(),
-            CatalogState::Ready { manifest, source, warning } => {
-                let releases = manifest.versions.iter().filter(|version| version.kind == VersionKind::Release).count();
-                let snapshots = manifest.versions.iter().filter(|version| version.kind == VersionKind::Snapshot).count();
-                let source = match source { CatalogSource::Network => "updated from Mojang", CatalogSource::Cache => "loaded from cache", CatalogSource::NotModified => "already current" };
+            CatalogState::Loading => row![
+                text("Refreshing the official Minecraft catalog…"),
+                button("Refresh").on_press(Message::RefreshCatalog)
+            ]
+            .spacing(12)
+            .into(),
+            CatalogState::Failed(error) => container(
+                column![
+                    text("Could not load Minecraft versions").size(20),
+                    text(error),
+                    button("Try again").on_press(Message::RefreshCatalog)
+                ]
+                .spacing(10),
+            )
+            .padding(16)
+            .into(),
+            CatalogState::Ready {
+                manifest,
+                source,
+                warning,
+            } => {
+                let releases = manifest
+                    .versions
+                    .iter()
+                    .filter(|version| version.kind == VersionKind::Release)
+                    .count();
+                let snapshots = manifest
+                    .versions
+                    .iter()
+                    .filter(|version| version.kind == VersionKind::Snapshot)
+                    .count();
+                let source = match source {
+                    CatalogSource::Network => "updated from Mojang",
+                    CatalogSource::Cache => "loaded from cache",
+                    CatalogSource::NotModified => "already current",
+                };
                 let mut details = column![
-                    text(format!("Minecraft {} is the latest release", manifest.latest.release)).size(20),
-                    text(format!("{} versions available ({} releases, {} snapshots) • {}", manifest.versions.len(), releases, snapshots, source)),
+                    text(format!(
+                        "Minecraft {} is the latest release",
+                        manifest.latest.release
+                    ))
+                    .size(20),
+                    text(format!(
+                        "{} versions available ({} releases, {} snapshots) • {}",
+                        manifest.versions.len(),
+                        releases,
+                        snapshots,
+                        source
+                    )),
                     button("Refresh catalog").on_press(Message::RefreshCatalog),
-                ].spacing(8);
-                if let Some(warning) = warning { details = details.push(text(format!("Offline warning: {warning}"))); }
+                ]
+                .spacing(8);
+                if let Some(warning) = warning {
+                    details = details.push(text(format!("Offline warning: {warning}")));
+                }
                 container(details).padding(16).into()
             }
         }

@@ -19,7 +19,11 @@ pub enum Page {
 pub enum CatalogState {
     NotLoaded,
     Loading,
-    Ready { manifest: VersionManifest, source: CatalogSource, warning: Option<String> },
+    Ready {
+        manifest: VersionManifest,
+        source: CatalogSource,
+        warning: Option<String>,
+    },
     Failed(String),
 }
 
