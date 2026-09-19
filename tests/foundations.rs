@@ -1,10 +1,17 @@
-use andromeda_client::{config::{AppSettings, SettingsRepository}, domain::{TaskProgress, TaskState}, telemetry::Secret};
+use andromeda_client::{
+    config::{AppSettings, SettingsRepository},
+    domain::{TaskProgress, TaskState},
+    telemetry::Secret,
+};
 
 #[test]
 fn settings_round_trip() {
     let temp = tempfile::tempdir().unwrap();
     let repository = SettingsRepository::new(temp.path().join("settings.json"));
-    let settings = AppSettings { show_snapshots: true, ..Default::default() };
+    let settings = AppSettings {
+        show_snapshots: true,
+        ..Default::default()
+    };
     repository.save(&settings).unwrap();
     let loaded = repository.load().unwrap();
     assert_eq!(loaded.settings, settings);
@@ -31,6 +38,11 @@ fn secrets_never_format_the_inner_value() {
 
 #[test]
 fn progress_is_bounded() {
-    let progress = TaskProgress { state: TaskState::Running, completed: 150, total: 100, phase: String::new() };
+    let progress = TaskProgress {
+        state: TaskState::Running,
+        completed: 150,
+        total: 100,
+        phase: String::new(),
+    };
     assert_eq!(progress.percentage(), 1.0);
 }

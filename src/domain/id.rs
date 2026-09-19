@@ -9,11 +9,15 @@ macro_rules! uuid_id {
 
         impl $name {
             #[must_use]
-            pub fn new() -> Self { Self(Uuid::new_v4()) }
+            pub fn new() -> Self {
+                Self(Uuid::new_v4())
+            }
         }
 
         impl Default for $name {
-            fn default() -> Self { Self::new() }
+            fn default() -> Self {
+                Self::new()
+            }
         }
 
         impl std::fmt::Display for $name {

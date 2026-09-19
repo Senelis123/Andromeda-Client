@@ -15,6 +15,9 @@ fn main() -> iced::Result {
         }
     };
 
-    tracing::info!(version = env!("CARGO_PKG_VERSION"), "starting Andromeda Client");
+    tracing::info!(
+        version = env!("CARGO_PKG_VERSION"),
+        "starting Andromeda Client"
+    );
     andromeda_client::ui::run(paths)
 }

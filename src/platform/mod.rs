@@ -29,8 +29,10 @@ impl AppPaths {
     pub fn isolated(root: impl Into<PathBuf>) -> Self {
         let root = root.into();
         Self {
-            config: root.join("config"), data: root.join("data"),
-            cache: root.join("cache"), logs: root.join("logs"),
+            config: root.join("config"),
+            data: root.join("data"),
+            cache: root.join("cache"),
+            logs: root.join("logs"),
         }
     }
 }
