@@ -3,7 +3,7 @@ on:
   push:
   pull_request:
 permissions:
-  contents: write
+  contents: read
 jobs:
   check:
     strategy:
@@ -15,17 +15,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
           components: rustfmt, clippy
-      - name: Format and commit (temporary bootstrap)
-        if: runner.os == 'Linux'
-        run: |
-          cargo fmt --all
-          if ! git diff --quiet; then
-            git config user.name github-actions[bot]
-            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git add --all
-            git commit -m "Apply rustfmt"
-            git push
-          fi
       - run: cargo fmt --check
       - run: cargo clippy --all-targets --all-features -- -D warnings
       - run: cargo test --all-targets
