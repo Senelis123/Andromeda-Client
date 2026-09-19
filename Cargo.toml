@@ -1,0 +1,36 @@
+[package]
+name = "andromeda-client"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+description = "A secure, native Minecraft launcher"
+license = "GPL-3.0-only"
+repository = "https://github.com/Senelis123/Andromeda-Client"
+
+[dependencies]
+directories = "6.0"
+iced = { version = "0.14", features = ["tokio"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "http2"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+time = { version = "0.3", features = ["serde", "formatting"] }
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+uuid = { version = "1.18", features = ["v4", "serde"] }
+
+[dev-dependencies]
+tempfile = "3.21"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+
+[profile.release]
+lto = "thin"
+strip = "symbols"
