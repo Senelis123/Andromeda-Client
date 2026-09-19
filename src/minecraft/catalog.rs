@@ -132,13 +132,14 @@ impl VersionCatalogService {
 }
 
 fn fallback(cache: Option<CachedManifest>, warning: String) -> Result<CatalogUpdate, String> {
-    cache
-        .map(|cache| CatalogUpdate {
+    match cache {
+        Some(cache) => Ok(CatalogUpdate {
             manifest: cache.manifest,
             source: CatalogSource::Cache,
             warning: Some(warning),
-        })
-        .ok_or(warning)
+        }),
+        None => Err(warning),
+    }
 }
 
 fn validate_manifest(manifest: &VersionManifest) -> Result<(), String> {
