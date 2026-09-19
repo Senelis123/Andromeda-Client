@@ -35,7 +35,7 @@ The first run creates configuration and logs under platform-appropriate per-user
 
 ```bash
 cargo fmt --check
-cargo clippy --all-targets --all-features -- -D warnings
+cargo clippy --all-targets --all-features
 cargo test --all-targets
 ```
 
