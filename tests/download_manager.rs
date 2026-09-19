@@ -20,7 +20,11 @@ struct Reply {
 
 async fn server(
     replies: Vec<Reply>,
-) -> (reqwest::Url, Arc<Mutex<Vec<String>>>, tokio::task::JoinHandle<()>) {
+) -> (
+    reqwest::Url,
+    Arc<Mutex<Vec<String>>>,
+    tokio::task::JoinHandle<()>,
+) {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
     let requests = Arc::new(Mutex::new(Vec::new()));
@@ -95,8 +99,16 @@ async fn verifies_and_atomically_publishes_a_download() {
     server.await.unwrap();
 
     assert_eq!(result.completed_jobs, 1);
-    assert_eq!(std::fs::read(temp.path().join("nested/artifact.bin")).unwrap(), body);
-    assert!(!temp.path().join("nested/.artifact.bin.andromeda.part").exists());
+    assert_eq!(
+        std::fs::read(temp.path().join("nested/artifact.bin")).unwrap(),
+        body
+    );
+    assert!(
+        !temp
+            .path()
+            .join("nested/.artifact.bin.andromeda.part")
+            .exists()
+    );
     assert!(
         std::iter::from_fn(|| receiver.try_recv().ok())
             .any(|event| matches!(event, DownloadEvent::Completed { .. }))
@@ -139,7 +151,10 @@ async fn resumes_only_with_a_validator_and_confirmed_range() {
     server.await.unwrap();
 
     assert_eq!(result.network_bytes, remainder.len() as u64);
-    assert_eq!(std::fs::read(directory.join("artifact.bin")).unwrap(), whole);
+    assert_eq!(
+        std::fs::read(directory.join("artifact.bin")).unwrap(),
+        whole
+    );
     let request = &requests.lock().await[0];
     assert!(request.contains("range: bytes=6-") || request.contains("Range: bytes=6-"));
     assert!(request.contains("if-range: \"stable\"") || request.contains("If-Range: \"stable\""));

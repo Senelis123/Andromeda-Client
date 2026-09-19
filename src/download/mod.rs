@@ -96,7 +96,10 @@ impl Default for DownloadConfig {
 /// terminal events are still attempted and the final summary is authoritative.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DownloadEvent {
-    Started { id: String, resumed_from: u64 },
+    Started {
+        id: String,
+        resumed_from: u64,
+    },
     Progress(DownloadProgress),
     Retrying {
         id: String,
@@ -104,9 +107,17 @@ pub enum DownloadEvent {
         delay: Duration,
         reason: String,
     },
-    Completed { id: String, bytes: u64 },
-    Failed { id: String, error: String },
-    Cancelled { id: String },
+    Completed {
+        id: String,
+        bytes: u64,
+    },
+    Failed {
+        id: String,
+        error: String,
+    },
+    Cancelled {
+        id: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -248,10 +259,9 @@ impl DownloadManager {
         reject_symlink(&self.inner.root).await?;
 
         let total_jobs = plan.jobs.len();
-        let total_bytes = plan
-            .jobs
-            .iter()
-            .try_fold(0_u64, |sum, job| job.expected_size.and_then(|n| sum.checked_add(n)));
+        let total_bytes = plan.jobs.iter().try_fold(0_u64, |sum, job| {
+            job.expected_size.and_then(|n| sum.checked_add(n))
+        });
         let counters = Arc::new(Counters::default());
         let semaphore = Arc::new(Semaphore::new(self.inner.config.concurrency));
         let mut tasks = JoinSet::new();
@@ -385,12 +395,15 @@ async fn run_job(
             Err(error) if error.retryable() && attempt < inner.config.max_attempts => {
                 let delay = retry_after(&error)
                     .unwrap_or_else(|| backoff(inner.config.initial_backoff, attempt));
-                send_event(progress, DownloadEvent::Retrying {
-                    id: job.id.clone(),
-                    attempt: attempt + 1,
-                    delay,
-                    reason: error.to_string(),
-                });
+                send_event(
+                    progress,
+                    DownloadEvent::Retrying {
+                        id: job.id.clone(),
+                        attempt: attempt + 1,
+                        delay,
+                        reason: error.to_string(),
+                    },
+                );
                 last_error = Some(error);
                 tokio::select! {
                     () = cancellation.cancelled() => return Err(DownloadError::Cancelled),
@@ -485,10 +498,13 @@ async fn transfer_once(
     } else {
         let _ = fs::remove_file(resume_path).await;
     }
-    send_event(progress, DownloadEvent::Started {
-        id: job.id.clone(),
-        resumed_from: write_offset,
-    });
+    send_event(
+        progress,
+        DownloadEvent::Started {
+            id: job.id.clone(),
+            resumed_from: write_offset,
+        },
+    );
     match write_offset.cmp(logical_accounted) {
         std::cmp::Ordering::Greater => {
             counters
@@ -524,8 +540,12 @@ async fn transfer_once(
         *logical_accounted = logical_accounted.saturating_add(count);
         send_progress(progress, counters, total_jobs, total_bytes);
     }
-    file.flush().await.map_err(|source| io_error(part, source))?;
-    file.sync_all().await.map_err(|source| io_error(part, source))?;
+    file.flush()
+        .await
+        .map_err(|source| io_error(part, source))?;
+    file.sync_all()
+        .await
+        .map_err(|source| io_error(part, source))?;
     Ok(())
 }
 
@@ -534,7 +554,9 @@ fn validate_plan(plan: &DownloadPlan) -> Result<(), DownloadError> {
     let mut ids = HashSet::new();
     for job in &plan.jobs {
         if job.id.is_empty() || !ids.insert(&job.id) {
-            return Err(DownloadError::InvalidPlan("job IDs must be non-empty and unique".into()));
+            return Err(DownloadError::InvalidPlan(
+                "job IDs must be non-empty and unique".into(),
+            ));
         }
         validate_relative_path(&job.destination)?;
         let folded = job.destination.to_string_lossy().to_ascii_lowercase();
@@ -572,11 +594,16 @@ fn allowed_url(url: &Url) -> bool {
 /// on every platform so plans behave consistently when moved between hosts.
 pub fn validate_relative_path(path: &Path) -> Result<(), DownloadError> {
     if path.as_os_str().is_empty() || path.as_os_str().to_string_lossy().len() > 1024 {
-        return Err(DownloadError::InvalidPlan("destination path is empty or too long".into()));
+        return Err(DownloadError::InvalidPlan(
+            "destination path is empty or too long".into(),
+        ));
     }
     for component in path.components() {
         let Component::Normal(value) = component else {
-            return Err(DownloadError::InvalidPlan(format!("unsafe destination: {}", path.display())));
+            return Err(DownloadError::InvalidPlan(format!(
+                "unsafe destination: {}",
+                path.display()
+            )));
         };
         let value = value.to_string_lossy();
         if value.is_empty()
@@ -585,17 +612,27 @@ pub fn validate_relative_path(path: &Path) -> Result<(), DownloadError> {
             || value.contains(['\0', ':'])
             || is_windows_device_name(&value)
         {
-            return Err(DownloadError::InvalidPlan(format!("unsafe path component: {value}")));
+            return Err(DownloadError::InvalidPlan(format!(
+                "unsafe path component: {value}"
+            )));
         }
     }
     Ok(())
 }
 
 fn is_windows_device_name(value: &str) -> bool {
-    let stem = value.split('.').next().unwrap_or_default().to_ascii_uppercase();
+    let stem = value
+        .split('.')
+        .next()
+        .unwrap_or_default()
+        .to_ascii_uppercase();
     matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
-        || stem.strip_prefix("COM").is_some_and(|n| matches!(n, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"))
-        || stem.strip_prefix("LPT").is_some_and(|n| matches!(n, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"))
+        || stem
+            .strip_prefix("COM")
+            .is_some_and(|n| matches!(n, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"))
+        || stem
+            .strip_prefix("LPT")
+            .is_some_and(|n| matches!(n, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"))
 }
 
 async fn ensure_safe_parent(root: &Path, destination: &Path) -> Result<(), DownloadError> {
@@ -721,8 +758,8 @@ async fn read_resume(path: &Path) -> Option<ResumeRecord> {
 }
 
 async fn write_resume(path: &Path, record: &ResumeRecord) -> Result<(), DownloadError> {
-    let bytes = serde_json::to_vec(record)
-        .map_err(|error| DownloadError::Worker(error.to_string()))?;
+    let bytes =
+        serde_json::to_vec(record).map_err(|error| DownloadError::Worker(error.to_string()))?;
     fs::write(path, bytes)
         .await
         .map_err(|source| io_error(path, source))
@@ -808,7 +845,14 @@ mod tests {
 
     #[test]
     fn rejects_unsafe_paths() {
-        for path in ["../escape", "/absolute", "safe/../escape", "CON", "a/NUL.txt", "trailing. "] {
+        for path in [
+            "../escape",
+            "/absolute",
+            "safe/../escape",
+            "CON",
+            "a/NUL.txt",
+            "trailing. ",
+        ] {
             assert!(validate_relative_path(Path::new(path)).is_err(), "{path}");
         }
         assert!(validate_relative_path(Path::new("libraries/org/example.jar")).is_ok());
