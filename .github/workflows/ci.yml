@@ -16,7 +16,7 @@ jobs:
         with:
           components: rustfmt, clippy
       - name: Format and commit (temporary bootstrap)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Linux'
         run: |
           cargo fmt --all
           if ! git diff --quiet; then
