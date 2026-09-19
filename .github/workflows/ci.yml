@@ -27,5 +27,20 @@ jobs:
             git push origin HEAD:arena/01a0b93a-andromeda-client
           fi
       - run: cargo fmt --check
-      - run: cargo clippy --all-targets --all-features
+      - name: Run Clippy and capture diagnostics
+        run: |
+          set +e
+          cargo clippy --all-targets --all-features > ci-output.txt 2>&1
+          status=$?
+          cat ci-output.txt
+          if [ "$status" -ne 0 ] && [ "$RUNNER_OS" = Linux ]; then
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git add ci-output.txt
+            git commit -m "Capture Clippy diagnostics"
+            git push origin HEAD:arena/01a0b93a-andromeda-client
+          fi
+          rm ci-output.txt
+          exit "$status"
+        shell: bash
       - run: cargo test --all-targets
