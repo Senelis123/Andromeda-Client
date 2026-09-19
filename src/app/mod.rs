@@ -1,2 +1,2 @@
 mod state;
-pub use state::{AppState, Page};
+pub use state::{AppState, CatalogState, Page};

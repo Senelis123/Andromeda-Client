@@ -1,6 +1,6 @@
 # Andromeda Client — Project Blueprint
 
-**Status:** Approved; Milestone 1 in progress  
+**Status:** Approved; Milestone 2 implemented for review
 **Initial target:** Windows 10/11  
 **Architecture goal:** Portable core, native desktop shell, official Minecraft services only
 

@@ -1,6 +1,7 @@
 use crate::{
     config::AppSettings,
     domain::{TaskProgress, TaskState},
+    minecraft::{CatalogSource, VersionManifest},
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -15,11 +16,20 @@ pub enum Page {
 }
 
 #[derive(Debug, Clone)]
+pub enum CatalogState {
+    NotLoaded,
+    Loading,
+    Ready { manifest: VersionManifest, source: CatalogSource, warning: Option<String> },
+    Failed(String),
+}
+
+#[derive(Debug, Clone)]
 pub struct AppState {
     pub page: Page,
     pub settings: AppSettings,
     pub recovery_notice: Option<String>,
     pub task: Option<TaskProgress>,
+    pub catalog: CatalogState,
 }
 
 impl AppState {
@@ -30,6 +40,7 @@ impl AppState {
             settings,
             recovery_notice,
             task: None,
+            catalog: CatalogState::NotLoaded,
         }
     }
     pub fn start_demo(&mut self) {

@@ -1,12 +1,13 @@
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 use iced::widget::{Space, button, column, container, progress_bar, row, rule, scrollable, text};
 use iced::{Element, Length, Subscription, Theme};
 
 use crate::{
-    app::{AppState, Page},
+    app::{AppState, CatalogState, Page},
     config::{SettingsRepository, ThemePreference},
     domain::TaskState,
+    minecraft::{CatalogSource, CatalogUpdate, VersionCatalogService, VersionKind},
     platform::AppPaths,
 };
 
@@ -14,6 +15,7 @@ use crate::{
 struct Launcher {
     state: AppState,
     settings_repository: SettingsRepository,
+    cache_root: PathBuf,
 }
 
 #[derive(Debug, Clone)]
@@ -25,6 +27,8 @@ enum Message {
     DismissNotice,
     SetTheme(ThemePreference),
     ToggleSnapshots,
+    RefreshCatalog,
+    CatalogLoaded(Result<CatalogUpdate, String>),
 }
 
 pub fn run(paths: AppPaths) -> iced::Result {
@@ -39,8 +43,15 @@ pub fn run(paths: AppPaths) -> iced::Result {
     let app = Launcher {
         state: AppState::new(outcome.settings, outcome.recovery_notice),
         settings_repository: repository,
+        cache_root: paths.cache,
     };
-    iced::application(move || app.clone(), Launcher::update, Launcher::view)
+    iced::application(
+        move || {
+            let mut initial = app.clone();
+            initial.state.catalog = CatalogState::Loading;
+            let task = refresh_catalog(initial.cache_root.clone());
+            (initial, task)
+        }, Launcher::update, Launcher::view)
         .title(Launcher::title)
         .subscription(Launcher::subscription)
         .theme(Launcher::theme)
@@ -75,7 +86,7 @@ impl Launcher {
             Subscription::none()
         }
     }
-    fn update(&mut self, message: Message) {
+    fn update(&mut self, message: Message) -> iced::Task<Message> {
         match message {
             Message::Navigate(page) => self.state.page = page,
             Message::StartDemo => {
@@ -93,7 +104,22 @@ impl Launcher {
                 self.state.settings.show_snapshots = !self.state.settings.show_snapshots;
                 self.persist_settings();
             }
+            Message::RefreshCatalog => {
+                self.state.catalog = CatalogState::Loading;
+                return refresh_catalog(self.cache_root.clone());
+            }
+            Message::CatalogLoaded(result) => {
+                self.state.catalog = match result {
+                    Ok(update) => CatalogState::Ready {
+                        manifest: update.manifest,
+                        source: update.source,
+                        warning: update.warning,
+                    },
+                    Err(error) => CatalogState::Failed(error),
+                };
+            }
         }
+        iced::Task::none()
     }
     fn persist_settings(&mut self) {
         if let Err(error) = self.settings_repository.save(&self.state.settings) {
@@ -139,16 +165,70 @@ impl Launcher {
         match self.state.page {
             Page::Home => column![
                 text("Welcome to your Minecraft library").size(26),
-                text("No instance selected yet. Milestone 1 uses demonstration data and performs no network requests."),
+                self.catalog_summary(),
                 container(column![text("Vanilla demonstration instance").size(21), text("Version: not installed  •  Java: not configured"), button("Run progress demonstration").on_press(Message::StartDemo)].spacing(14)).padding(22),
             ].spacing(20).into(),
-            Page::Instances => placeholder("Instances", "Create, isolate, repair, and launch installations. Instance storage arrives in Milestone 4."),
+            Page::Instances => self.versions_page(),
             Page::Downloads => self.downloads_page(),
             Page::Accounts => placeholder("Accounts", "Official Microsoft authentication will be implemented in Milestone 6. No credentials are collected yet."),
             Page::Logs => placeholder("Logs & console", "Structured launcher logs are stored on disk. Game-session filtering arrives with the launch engine."),
             Page::Settings => self.settings_page(),
         }
     }
+    fn versions_page(&self) -> Element<'_, Message> {
+        let CatalogState::Ready { manifest, .. } = &self.state.catalog else {
+            return column![
+                text("Available Minecraft versions").size(22),
+                text("The official catalog must load before versions can be displayed."),
+                button("Refresh catalog").on_press(Message::RefreshCatalog),
+            ]
+            .spacing(12)
+            .into();
+        };
+
+        let mut versions = column![
+            text("Available Minecraft versions").size(22),
+            text("Live entries from Mojang's manifest. Installation is implemented in Milestone 5."),
+        ]
+        .spacing(8);
+        for version in manifest
+            .versions
+            .iter()
+            .filter(|version| self.state.settings.show_snapshots || version.kind == VersionKind::Release)
+            .take(40)
+        {
+            versions = versions.push(
+                row![
+                    text(&version.id).width(Length::Fixed(160.0)),
+                    text(version.kind.to_string()).width(Length::Fixed(100.0)),
+                    text(&version.release_time),
+                ]
+                .spacing(12),
+            );
+        }
+        versions.into()
+    }
+
+    fn catalog_summary(&self) -> Element<'_, Message> {
+        match &self.state.catalog {
+            CatalogState::NotLoaded => text("Version catalog has not been loaded.").into(),
+            CatalogState::Loading => row![text("Refreshing the official Minecraft catalog…"), button("Refresh").on_press(Message::RefreshCatalog)].spacing(12).into(),
+            CatalogState::Failed(error) => container(column![text("Could not load Minecraft versions").size(20), text(error), button("Try again").on_press(Message::RefreshCatalog)].spacing(10)).padding(16).into(),
+            CatalogState::Ready { manifest, source, warning } => {
+                let releases = manifest.versions.iter().filter(|version| version.kind == VersionKind::Release).count();
+                let snapshots = manifest.versions.iter().filter(|version| version.kind == VersionKind::Snapshot).count();
+                let source = match source { CatalogSource::Network => "updated from Mojang", CatalogSource::Cache => "loaded from cache", CatalogSource::NotModified => "already current" };
+                let mut details = column![
+                    text(format!("Minecraft {} is the latest release", manifest.latest.release)).size(20),
+                    text(format!("{} versions available ({} releases, {} snapshots) • {}", manifest.versions.len(), releases, snapshots, source)),
+                    button("Refresh catalog").on_press(Message::RefreshCatalog),
+                ].spacing(8);
+                if let Some(warning) = warning { details = details.push(text(format!("Offline warning: {warning}"))); }
+                container(details).padding(16).into()
+            }
+        }
+    }
+
     fn downloads_page(&self) -> Element<'_, Message> {
         if let Some(task) = &self.state.task {
             let action = if task.state == TaskState::Running {
@@ -190,6 +270,17 @@ impl Launcher {
     }
 }
 
+fn refresh_catalog(cache_root: PathBuf) -> iced::Task<Message> {
+    iced::Task::perform(
+        async move {
+            let service = VersionCatalogService::new(&cache_root)
+                .map_err(|error| format!("could not initialize the Mojang HTTP client: {error}"))?;
+            service.refresh().await
+        },
+        Message::CatalogLoaded,
+    )
+}
+
 fn nav_button(label: &'static str, page: Page, selected: Page) -> Element<'static, Message> {
     let label = if page == selected {
         format!("› {label}")
@@ -205,7 +296,7 @@ fn page_header(name: &str) -> Element<'_, Message> {
     row![
         text(name).size(32),
         Space::new().width(Length::Fill),
-        text("Milestone 1")
+        text("Milestone 2")
     ]
     .align_y(iced::Alignment::Center)
     .into()
