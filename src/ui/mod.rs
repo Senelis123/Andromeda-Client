@@ -362,7 +362,7 @@ fn page_header(name: &str) -> Element<'_, Message> {
     row![
         text(name).size(32),
         Space::new().width(Length::Fill),
-        text("Milestone 2")
+        text("Milestone 3")
     ]
     .align_y(iced::Alignment::Center)
     .into()
