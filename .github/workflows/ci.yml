@@ -15,11 +15,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
           components: rustfmt, clippy
-      - name: Install Linux GUI dependencies
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwayland-dev libxkbcommon-dev
       - name: Format and commit (temporary bootstrap)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Windows'
         run: |
           cargo fmt --all
           if ! git diff --quiet; then
