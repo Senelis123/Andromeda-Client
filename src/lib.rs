@@ -3,6 +3,7 @@
 pub mod app;
 pub mod config;
 pub mod domain;
+pub mod download;
 pub mod minecraft;
 pub mod platform;
 pub mod storage;

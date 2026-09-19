@@ -2,7 +2,7 @@
 
 Andromeda Client is a native Rust desktop launcher for legitimate Minecraft accounts. The project is being developed incrementally with reliability, secure credential handling, metadata-driven version support, and isolated instances as core requirements.
 
-> **Current status: Milestone 1 foundation.** The UI contains clearly marked demonstration states. It does not authenticate, download Minecraft, or launch the game yet.
+> **Current status: Milestone 3 download engine.** The reusable engine can securely transfer and verify planned artifacts, but installation planning, authentication, and game launch are not implemented yet.
 
 ## Architecture
 
@@ -12,6 +12,7 @@ Andromeda Client is a native Rust desktop launcher for legitimate Minecraft acco
 - Structured local logging with secret-safe value wrappers
 - Typed application state and bounded-rate task progress
 - Platform paths isolated behind `AppPaths`
+- Reusable concurrent download manager with safe resume, retries, cancellation, integrity checks, and atomic publication
 
 See [the complete project blueprint](docs/architecture/project-blueprint.md) and [architecture decisions](docs/decisions/).
 
@@ -40,6 +41,8 @@ cargo test --all-targets
 ```
 
 CI runs these checks on Windows and Linux. Core tests require neither a GUI, network connection, nor account credentials.
+
+See [Milestone 2 metadata details](docs/milestone-2.md) and [Milestone 3 download-engine details](docs/milestone-3.md).
 
 ## Milestone 1 demonstration
 
